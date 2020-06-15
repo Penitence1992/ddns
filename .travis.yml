@@ -1,0 +1,22 @@
+os:
+  - linux
+
+language: go
+
+
+arch:
+  - amd64
+  - arm64
+
+services:
+  - docker
+
+script:
+  - go build -o ddns pkg/cmd.go
+  - docker build --build-arg version=$TRAVIS_COMMIT -t penitence/ddns:$TRAVIS_COMMIT .
+  - docker tag penitence/ddns:$TRAVIS_COMMIT penitence/ddns:latest
+
+after_success:
+  - docker login -u="$USERNAME" -p="$PASSWORD"
+  - docker push penitence/ddns:$TRAVIS_COMMIT
+  - docker push penitence/ddns:latest
