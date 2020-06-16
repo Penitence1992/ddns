@@ -28,7 +28,7 @@ jobs:
               dep ensure
           fi
       - name: Test
-        run: go test -v ./...
+        run: go test -v ./... -cover
 
       - name: Build
         run: go build -o ddns pkg/cmd.go
@@ -38,7 +38,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "ddns.tgz,ddns"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+          token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             Binary release
           draft: false
