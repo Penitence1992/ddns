@@ -12,6 +12,12 @@ jobs:
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=releaseName;]$(if [ "${GITHUB_REF##*/}" = "master" ]; then echo "latest"; else echo "${GITHUB_REF##*/}"; fi)"
+        id: args
+
       - name: echo debug msg
         run: |
           echo "build ${{ github.ref }} tag image"
@@ -24,6 +30,6 @@ jobs:
 
       - name: Run buildx
         run: |
-          docker buildx build -t penitence/ddns:${{github.ref}} --platform=linux/arm64,linux/amd64 \
+          docker buildx build -t penitence/ddns:${{ steps.args.outputs.releaseName }} --platform=linux/arm64,linux/amd64 \
             --output "type=image,push=false" \
-            --file .
+            .
