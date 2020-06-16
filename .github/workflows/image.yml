@@ -1,0 +1,24 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+    tags: ["*"]
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: echo debug msg
+        run:
+          - echo "build ${{ github.ref }} tag image"
+      - name: build docker image
+        id: buildx
+        uses: crazy-max/ghaction-docker-buildx@v3
+        run: |
+          docker buildx build -t penitence/ddns:${{github.ref}} --platform=linux/arm64,linux/amd64 \
+            --output "type=image,push=false" \
+            --file .
