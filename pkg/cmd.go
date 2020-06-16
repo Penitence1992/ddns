@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	dns "github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"io/ioutil"
 	"log"
@@ -10,7 +11,13 @@ import (
 	"os"
 )
 
+var gitCommit = ""
+var buildStamp = ""
+
 func main() {
+
+	fmt.Printf("Git Commit : %s\n", gitCommit)
+	fmt.Printf("Build Stamp : %s\n", buildStamp)
 
 	accessKey := getEnvAndFatalWithEmpty("accessKey")
 	accessSecret := getEnvAndFatalWithEmpty("accessSecret")

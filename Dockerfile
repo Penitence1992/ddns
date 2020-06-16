@@ -1,5 +1,7 @@
 ARG version=master
 ARG goVersion=1.14.3-alpine
+ARG gitCommit=""
+ARG buildStamp=""
 
 FROM golang:${goVersion} as builder
 
@@ -7,8 +9,7 @@ RUN mkdir /app
 
 ADD . /app
 
-RUN go test ./... -cover && \
-    go build -o ddns pkg/cmd.go
+RUN go build -ldflags "-X 'main.gitCommit=${gitCommit}' -X 'main.buildStamp=${buildStamp}'" -o ddns pkg/cmd.go
 
 FROM alpine
 

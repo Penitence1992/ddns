@@ -32,4 +32,5 @@ jobs:
         run: |
           docker buildx build -t penitence/ddns:${{ steps.args.outputs.releaseName }} --platform=linux/arm64,linux/amd64 \
             --output "type=image,push=false" \
+            --build-arg gitCommit=${GITHUB_SHA} --build-arg buildStamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'`
             .
