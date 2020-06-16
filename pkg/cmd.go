@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	_ "org.penitence/ddns/pkg/env"
+	"org.penitence/ddns/pkg/resolver"
 	"os"
 )
 
@@ -15,8 +16,9 @@ func main() {
 	accessSecret := getEnvAndFatalWithEmpty("accessSecret")
 	baseDomain := getEnvAndFatalWithEmpty("baseDomain")
 	domainRR := getEnvAndFatalWithEmpty("domainRR")
+	testUrl := getEnvAndFatalWithEmpty("testUrl")
 
-	publicIp := findPublicIP()
+	publicIp := findPublicIP(testUrl)
 
 	client, _ := dns.NewClientWithAccessKey("cn-hangzhou", accessKey, accessSecret)
 
@@ -46,19 +48,26 @@ func main() {
 		log.Println("发现dns解析记录")
 		for _, record := range response.DomainRecords.Record {
 			log.Printf("记录内容 : %v\n", record)
-			recordChangeRequest := dns.CreateUpdateDomainRecordRequest()
-			recordChangeRequest.Scheme = "https"
-			recordChangeRequest.RecordId = record.RecordId
-			recordChangeRequest.RR = record.RR
-			recordChangeRequest.Type = "A"
-			recordChangeRequest.Value = publicIp
-			invokeAliSdk(client.UpdateDomainRecord(recordChangeRequest))
+			log.Println(record.Value)
+			if record.Value == publicIp {
+				log.Println("ip没有变动, 跳过更新")
+			} else {
+				log.Printf("更新域名%s.%s的ip为%s", domainRR, baseDomain, publicIp)
+				recordChangeRequest := dns.CreateUpdateDomainRecordRequest()
+				recordChangeRequest.Scheme = "https"
+				recordChangeRequest.RecordId = record.RecordId
+				recordChangeRequest.RR = record.RR
+				recordChangeRequest.Type = "A"
+				recordChangeRequest.Value = publicIp
+				invokeAliSdk(client.UpdateDomainRecord(recordChangeRequest))
+			}
+
 		}
 	}
 
 }
-func findPublicIP() (publicIp string) {
-	res, err := http.Get("https://ip.cip.cc")
+func findPublicIP(testUrl string) (publicIp string) {
+	res, err := http.Get(testUrl)
 	if err != nil {
 		log.Fatalf("获取互联网ip失败 : %v", err)
 	}
@@ -66,16 +75,20 @@ func findPublicIP() (publicIp string) {
 	if err != nil {
 		log.Fatalf("读取请求内容失败 : %v", err)
 	}
-	publicIp = string(body)
-	log.Printf("访问https://ifconfig.me/ip获取到的互联网ip为:%s\n", publicIp)
+	publicIp = resolver.FindFirstIp(string(body))
+	if publicIp == "" {
+		log.Fatalln("响应中未发现ip地址")
+	}
+	log.Printf("访问%s获取到的互联网ip为:%s\n", testUrl, publicIp)
 	return
 }
 
-func getEnvAndFatalWithEmpty (envname string) (v string) {
+func getEnvAndFatalWithEmpty(envname string) (v string) {
 	v = os.Getenv(envname)
 	if v == "" {
 		log.Fatalf("无法获取变量:%s的内容", envname)
 	}
+	log.Printf("env name : %s , value : %s\n", envname, v)
 	return
 }
 
