@@ -30,9 +30,16 @@ jobs:
           buildx-version: latest
           qemu-version: latest
 
-      - name: Run buildx
+      - name: Docker login
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+      - name: Run buildx and push
         run: |
           docker buildx build -t penitence/ddns:${{ steps.args.outputs.releaseName }} --platform=linux/arm64,linux/amd64 \
-            --output "type=image,push=false" \
+            --output "type=image,push=true" \
             --build-arg gitCommit=${GITHUB_SHA} --build-arg buildStamp=${{steps.args.outputs.buildStamp}} \
             .
+
