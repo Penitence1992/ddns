@@ -43,3 +43,4 @@ jobs:
             Binary release
           draft: false
           prerelease: false
+          tag: ${{github.ref}}
