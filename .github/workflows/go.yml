@@ -22,7 +22,9 @@ jobs:
 
       - name: Extract branch name
         shell: bash
-        run: echo "##[set-output name=releaseName;]$(if [ "${GITHUB_REF##*/}" = "master" ]; then echo "latest"; else echo "${GITHUB_REF##*/}"; fi)"
+        run: |
+          echo "##[set-output name=releaseName;]$(if [ "${GITHUB_REF##*/}" = "master" ]; then echo "latest"; else echo "${GITHUB_REF##*/}"; fi)"
+          echo "##[set-output name=buildStamp;]"$(date -u '+%Y-%m-%d_%I:%M:%S%p')
         id: args
 
       - name: Get dependencies
@@ -36,7 +38,7 @@ jobs:
         run: go test -v ./... -cover
 
       - name: Build
-        run: go build -ldflags "-X 'main.gitCommit=${GITHUB_SHA}' -X main.buildStamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'`" -o ddns pkg/cmd.go
+        run: go build -ldflags "-X 'main.gitCommit=${GITHUB_SHA}' -X main.buildStamp=${steps.args.outputs.buildStamp}" -o ddns pkg/cmd.go
 
       - name: Create Release
         id: create_release
@@ -49,3 +51,4 @@ jobs:
           draft: false
           prerelease: false
           tag: ${{ steps.args.outputs.releaseName }}
+          allowUpdates: true
