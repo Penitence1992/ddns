@@ -9,6 +9,8 @@ import (
 	_ "org.penitence/ddns/pkg/env"
 	"org.penitence/ddns/pkg/resolver"
 	"os"
+	"strings"
+	"time"
 )
 
 var gitCommit = ""
@@ -22,38 +24,48 @@ func main() {
 	accessKey := getEnvAndFatalWithEmpty("accessKey")
 	accessSecret := getEnvAndFatalWithEmpty("accessSecret")
 	baseDomain := getEnvAndFatalWithEmpty("baseDomain")
-	domainRR := getEnvAndFatalWithEmpty("domainRR")
-	testUrl := getEnvAndFatalWithEmpty("testUrl")
+	domainRRs := getEnvAndFatalWithEmpty("domainRR")
+	testUrl := getEnvOrDefault("testUrl", " https://cip.cc")
+
+	log.Println("基础域名为: " + baseDomain)
+	log.Printf("三级域名: %s \n", strings.Split(domainRRs, ","))
+	log.Println("获取公网ip的测试url: " + testUrl)
 
 	publicIp := findPublicIP(testUrl)
 
 	client, _ := dns.NewClientWithAccessKey("cn-hangzhou", accessKey, accessSecret)
 
+	for _, domainRR := range strings.Split(domainRRs, ",") {
+		response, err := describeRR(client, baseDomain, domainRR)
+		if err != nil {
+			log.Printf("查询dns记录失败:%v", err)
+		}
+		invokeDDns(response, client, baseDomain, domainRR, publicIp)
+	}
+}
+
+func describeRR(client *dns.Client, baseDomain, domainRR string) (*dns.DescribeDomainRecordsResponse, error) {
 	recordRequest := dns.CreateDescribeDomainRecordsRequest()
 	recordRequest.Scheme = "https"
 	recordRequest.DomainName = baseDomain
 	recordRequest.TypeKeyWord = "A"
 	recordRequest.RRKeyWord = domainRR
+	return client.DescribeDomainRecords(recordRequest)
+}
 
-	response, err := client.DescribeDomainRecords(recordRequest)
-
-	if err != nil {
-		log.Fatalln(err)
-	}
-
+func invokeDDns(response *dns.DescribeDomainRecordsResponse, client *dns.Client, baseDomain, domainRR, publicIp string) {
 	if len(response.DomainRecords.Record) == 0 {
 		log.Println("未发现dns解析记录, 添加一个解析")
-
 		recordAddRequest := dns.CreateAddDomainRecordRequest()
 		recordAddRequest.Scheme = "https"
 		recordAddRequest.DomainName = baseDomain
 		recordAddRequest.RR = domainRR
 		recordAddRequest.Type = "A"
-		recordAddRequest.Value = "192.168.1.1"
+		recordAddRequest.Value = publicIp
 		invokeAliSdk(client.AddDomainRecord(recordAddRequest))
 	} else {
-		log.Println("发现dns解析记录")
 		for _, record := range response.DomainRecords.Record {
+			log.Printf("发现dns解析记录, RR:%s", record.RR)
 			log.Printf("记录内容 : %v\n", record)
 			log.Println(record.Value)
 			if record.Value == publicIp {
@@ -68,13 +80,15 @@ func main() {
 				recordChangeRequest.Value = publicIp
 				invokeAliSdk(client.UpdateDomainRecord(recordChangeRequest))
 			}
-
 		}
 	}
-
 }
+
 func findPublicIP(testUrl string) (publicIp string) {
-	res, err := http.Get(testUrl)
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	res, err := client.Get(testUrl)
 	if err != nil {
 		log.Fatalf("获取互联网ip失败 : %v", err)
 	}
@@ -90,12 +104,19 @@ func findPublicIP(testUrl string) (publicIp string) {
 	return
 }
 
+func getEnvOrDefault(env, def string) (v string) {
+	v = os.Getenv(env)
+	if v == "" {
+		return def
+	}
+	return v
+}
+
 func getEnvAndFatalWithEmpty(envname string) (v string) {
 	v = os.Getenv(envname)
 	if v == "" {
 		log.Fatalf("无法获取变量:%s的内容", envname)
 	}
-	log.Printf("env name : %s , value : %s\n", envname, v)
 	return
 }
 

@@ -38,7 +38,7 @@ jobs:
         run: go test -v ./... -cover
 
       - name: Build
-        run: go build -ldflags "-X 'main.gitCommit=${GITHUB_SHA}' -X main.buildStamp=${{steps.args.outputs.buildStamp}}" -o ddns pkg/cmd.go
+        run: go build -ldflags "-X 'main.gitCommit=${GITHUB_SHA}' -X main.buildStamp=${{steps.args.outputs.buildStamp}}" -o ddns cmd/exec/main.go
 
       - name: Create Release
         id: create_release
