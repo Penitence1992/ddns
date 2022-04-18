@@ -9,7 +9,7 @@ RUN mkdir /app
 ADD . /app
 
 RUN cd /app && \
-    GO111MODULE=on go build -ldflags "-s -w -X 'main.gitCommit=${gitCommit}' -X 'main.buildStamp=${buildStamp}'" -o ddns pkcmd/exec/main.go
+    GO111MODULE=on go build -ldflags "-s -w -X 'main.gitCommit=${gitCommit}' -X 'main.buildStamp=${buildStamp}'" -o ddns cmd/exec/main.go
 
 FROM alpine
 
